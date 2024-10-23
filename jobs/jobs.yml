@@ -1,0 +1,219 @@
+jobs:
+  kpler_main:
+    tasks:
+      # api to ingestion with 2 hour timeout
+      api_to_ingestion_lng:
+        timeout_seconds: 7200
+        cluster: default
+        notebook: "/kpler/lng/kpler_ingestion_lng"
+        base_parameters: { "max_retries": "10" }
+      api_to_ingestion_lpg:
+        timeout_seconds: 7200
+        cluster: default
+        notebook: "/kpler/lpg/kpler_ingestion_lpg"
+        base_parameters: { "max_retries": "10" }
+      api_to_ingestion_oil:
+        timeout_seconds: 7200
+        cluster: default
+        notebook: "/kpler/oil/kpler_ingestion_oil"
+        base_parameters: { "max_retries": "10" }
+      # ingestion to raw
+      ingestion_to_raw_lng:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lng/kpler_raw_lng"
+        depends_on: ["api_to_ingestion_lng"]
+      ingestion_to_raw_lpg:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lpg/kpler_raw_lpg"
+        depends_on: ["api_to_ingestion_lpg"]
+      ingestion_to_raw_oil:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/oil/kpler_raw_oil"
+        depends_on: ["api_to_ingestion_oil"]
+      # raw to cleaned
+      raw_to_cleaned_lng:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lng/kpler_cleaned_lng"
+        depends_on: ["ingestion_to_raw_lng"]
+      # cleaned to cleaned
+      cleaned_to_cleaned_lng_tracking_intransit:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lng/kpler_cleaned_lng_tracking_intransit"
+        depends_on: ["raw_to_cleaned_lng"]
+      # raw to curated
+      #trade
+      raw_to_curated_trade_lng:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lng/kpler_curated_lng_trade"
+        depends_on: ["ingestion_to_raw_lng"]
+      raw_to_curated_trade_lpg:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lpg/kpler_curated_lpg_trade"
+        depends_on: ["ingestion_to_raw_lpg"]
+      raw_to_curated_trade_oil:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/oil/kpler_curated_oil_trade"
+        depends_on: ["ingestion_to_raw_oil"]
+      #stem
+      raw_to_curated_stem_lng:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lng/kpler_curated_lng_stem"
+        depends_on: ["ingestion_to_raw_lng"]
+      raw_to_curated_stem_lpg:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lpg/kpler_curated_lpg_stem"
+        depends_on: ["ingestion_to_raw_lpg"]
+      raw_to_curated_stem_oil:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/oil/kpler_curated_oil_stem"
+        depends_on: ["ingestion_to_raw_oil"]
+      # sts
+      raw_to_curated_ship_to_ship_lng:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lng/kpler_curated_lng_ship_to_ship"
+        depends_on: ["ingestion_to_raw_lng"]
+      raw_to_curated_ship_to_ship_lpg:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lpg/kpler_curated_lpg_ship_to_ship"
+        depends_on: ["ingestion_to_raw_lpg"]
+      raw_to_curated_ship_to_ship_oil:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/oil/kpler_curated_oil_ship_to_ship"
+        depends_on: ["ingestion_to_raw_oil"]
+      # intermediary link
+      raw_to_curated_intermediary_link_lng:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lng/kpler_curated_lng_intermediary_link"
+        depends_on: ["ingestion_to_raw_lng"]
+      raw_to_curated_intermediary_link_lpg:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lpg/kpler_curated_lpg_intermediary_link"
+        depends_on: ["ingestion_to_raw_lpg"]
+      raw_to_curated_intermediary_link_oil:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/oil/kpler_curated_oil_intermediary_link"
+        depends_on: ["ingestion_to_raw_oil"]
+      # curated to certified
+      # trade, depends on curated only
+      curated_to_certified_trade_lng:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lng/kpler_certified_lng_trade"
+        depends_on: ["raw_to_curated_trade_lng"]
+      # stem, depends on trade and curated
+      curated_to_certified_stem_lng:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lng/kpler_certified_lng_stem"
+        depends_on:
+          ["raw_to_curated_stem_lng", "curated_to_certified_trade_lng"]
+      # ship to ship, depends on curated, trade and stem
+      curated_to_certified_ship_to_ship_lng:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lng/kpler_certified_lng_ship_to_ship"
+        depends_on:
+          [
+            "raw_to_curated_ship_to_ship_lng",
+            "curated_to_certified_stem_lng",
+            "curated_to_certified_trade_lng",
+          ]
+          # intermediary link, depends on curated and trade
+      curated_to_certified_intermediary_link_lng:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/lng/kpler_certified_lng_intermediary_link"
+        depends_on:
+          [
+            "raw_to_curated_intermediary_link_lng",
+            "curated_to_certified_trade_lng",
+          ]
+      certified_to_cosmos_db_sts:
+        timeout_seconds: 0
+        cluster: cosmos
+        notebook: "/cosmos_db_export/sts_cosmos_db_export"
+        libraries:
+          maven:
+            - {
+                coordinates: "com.azure.cosmos.spark:azure-cosmos-spark_3-2_2-12:4.12.1",
+              }
+        depends_on:
+          [
+            "curated_to_certified_ship_to_ship_lng",
+          ]
+        base_parameters: { "provider": "Kpler" }
+      certified_to_cosmos_db_trade_stem:
+        timeout_seconds: 0
+        cluster: cosmos
+        notebook: "/cosmos_db_export/trade_stem_cosmos_db_export"
+        libraries:
+          maven:
+            - {
+                coordinates: "com.azure.cosmos.spark:azure-cosmos-spark_3-2_2-12:4.12.1",
+              }
+        depends_on:
+          [
+            "curated_to_certified_ship_to_ship_lng",
+            "curated_to_certified_intermediary_link_lng",
+          ]
+        base_parameters: { "provider": "Kpler" }
+    clusters:
+      default:
+        type: standard
+        worker_type: medium_job
+        min_workers: 4
+        commodity_group: "oil"
+        desk: "all"
+      cosmos:
+        type: standard
+        worker_type: medium_job
+        min_workers: 1
+        commodity_group: "oil"
+        desk: "all"
+    max_concurrent_runs: 1
+
+  kpler_vessels_main:
+    tasks:
+      # api to ingestion with 2 hour timeout
+      kpler_ingestion_vessels_lng:
+        timeout_seconds: 7200
+        cluster: default
+        notebook: "/kpler/vessels_lng/kpler_ingestion_vessels_lng"
+        base_parameters: { "max_retries": "10" }
+      # ingestion to raw
+      kpler_raw_vessels_lng:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/vessels_lng/kpler_raw_vessels_lng"
+        depends_on: ["kpler_ingestion_vessels_lng"]
+      # raw to cleaned
+      kpler_cleaned_vessels_lng:
+        timeout_seconds: 0
+        cluster: default
+        notebook: "/kpler/vessels_lng/kpler_cleaned_vessels_lng"
+        depends_on: ["kpler_raw_vessels_lng"]
+    clusters:
+      default:
+        type: standard
+        worker_type: medium_job
+        min_workers: 1
+        commodity_group: "oil"
+        desk: "all"
+    max_concurrent_runs: 1
