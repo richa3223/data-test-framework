@@ -1,3 +1,4 @@
+### This framework was created by taking reference from Glencore's data test framework.
 # Kpler Pipelines and e2e tests
 
 ![develop branch status](https://github.com/glencore-gbldn/glencore-synergy-pipelines-kpler/actions/workflows/run-all-tests.yml/badge.svg)
